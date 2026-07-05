@@ -1,12 +1,22 @@
 # ============================================================
-# D525 四口千兆软路由 — 默认网络配置
+# D525 四口千兆 — 多宽带聚合网络配置
 # ============================================================
-# 端口布局 (从左到右/从上到下):
-#   eth0 = WAN  (接光猫/上级网络)
-#   eth1 = LAN1 (接交换机/PC)
-#   eth2 = LAN2
-#   eth3 = LAN3
-#   LAN1-3 桥接为 br-lan
+# D525 四口布局 (从靠近电源到远离):
+#   eth0 = WAN1 (主宽带 — 电信)
+#   eth1 = WAN2 (副宽带 — 联通/移动)
+#   eth2 = LAN1 (接交换机/AP/PC)
+#   eth3 = LAN2 (接交换机/AP/PC)
+#
+# 网络拓扑:
+#   电信 ─── eth0 (WAN1) ─┐
+#   联通 ─── eth1 (WAN2) ─┤── MWAN3 负载均衡 ── br-lan (eth2+eth3) ── 内网
+#
+# ============================================================
+# 可选方案（修改下方即可切换）:
+#
+#  方案A (默认): 2 WAN + 2 LAN 桥接 → 双线聚合 + 冗余内网口
+#  方案B:        3 WAN + 1 LAN       → 三线聚合 (eth2改为WAN3, eth3=LAN)
+#  方案C:        2 WAN + 1 LAN + 1 DMZ → 带隔离区的聚合
 # ============================================================
 
 config interface 'loopback'
@@ -19,15 +29,15 @@ config globals 'globals'
 	option ula_prefix 'fd00:abcd:5678::/48'
 	option packet_steering '1'
 
-# --- LAN 桥接 (eth1 + eth2 + eth3) ---
+# ─────────── LAN 桥接（eth2 + eth3）───────────
 config device
 	option name 'br-lan'
 	option type 'bridge'
-	list ports 'eth1'
 	list ports 'eth2'
 	list ports 'eth3'
 	option igmp_snooping '1'
 	option stp '0'
+	option mtu '1500'
 
 config interface 'lan'
 	option device 'br-lan'
@@ -37,16 +47,74 @@ config interface 'lan'
 	option ip6assign '60'
 	option delegate '0'
 
-# --- WAN (eth0) ---
-config interface 'wan'
+# ─────────── WAN1 (eth0 - 主宽带/电信) ───────────
+config interface 'wan1'
 	option device 'eth0'
 	option proto 'dhcp'
+	option metric '10'          # MWAN3: 主路由权重
 	option peerdns '0'
-	list dns '223.5.5.5'
-	list dns '119.29.29.29'
+	list dns '223.5.5.5'        # 阿里DNS
+	list dns '119.29.29.29'     # 腾讯DNS
 
-config interface 'wan6'
+config interface 'wan1_6'
 	option device 'eth0'
 	option proto 'dhcpv6'
 	option reqaddress 'try'
 	option reqprefix 'auto'
+	option metric '10'
+
+# ─────────── WAN2 (eth1 - 副宽带/联通移动) ───────────
+config interface 'wan2'
+	option device 'eth1'
+	option proto 'dhcp'
+	option metric '20'          # MWAN3: 副路由权重（更高=备用）
+	option peerdns '0'
+	list dns '223.5.5.5'
+	list dns '119.29.29.29'
+
+config interface 'wan2_6'
+	option device 'eth1'
+	option proto 'dhcpv6'
+	option reqaddress 'try'
+	option reqprefix 'auto'
+	option metric '20'
+
+# ════════════════════════════════════════════════
+# 方案B: 3 WAN + 1 LAN (取消下方注释, 注释掉 eth2 from br-lan)
+# ════════════════════════════════════════════════
+# config interface 'wan3'
+# 	option device 'eth2'
+# 	option proto 'dhcp'
+# 	option metric '30'
+# 	option peerdns '0'
+# 
+# config interface 'wan3_6'
+# 	option device 'eth2'
+# 	option proto 'dhcpv6'
+# 	option reqaddress 'try'
+# 	option reqprefix 'auto'
+# 	option metric '30'
+
+# ════════════════════════════════════════════════
+# PPoE 拨号场景 (如果需要PPPoE代替DHCP):
+# ════════════════════════════════════════════════
+# config interface 'wan1'
+# 	option device 'eth0'
+# 	option proto 'pppoe'
+# 	option username '宽带账号'
+# 	option password '宽带密码'
+# 	option metric '10'
+# 	option ipv6 'auto'
+# 
+# config interface 'wan2'
+# 	option device 'eth1'
+# 	option proto 'pppoe'
+# 	option username '宽带账号2'
+# 	option password '宽带密码2'
+# 	option metric '20'
+# 	option ipv6 'auto'
+
+# ════════════════════════════════════════════════
+# 单线多拨 (并发拨号 — 同一条宽带多次PPPoE拨号):
+#   使用 luci-app-syncdial 界面配置
+# ════════════════════════════════════════════════

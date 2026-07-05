@@ -1,0 +1,103 @@
+# ============================================================
+# MWAN3 多线负载均衡配置 — D525 四口千兆
+# ============================================================
+# 策略: 双WAN智能叠加
+#   - 电信走主线 (wan1, metric 10)
+#   - 联通走副线 (wan2, metric 20)
+#   - 默认负载均衡 (balanced): 根据源IP轮询分配连接
+#   - 故障切换: 任一线断线自动切到另一线
+# ============================================================
+
+# --- 接口成员定义 ---
+config member 'wan1_m1'
+	option interface 'wan1'
+	option metric '1'       # 权重=1（主）
+	option weight '10'       # 负载权重
+
+config member 'wan2_m2'
+	option interface 'wan2'
+	option metric '1'       # 权重=1（同等在线）
+	option weight '10'       # 负载权重
+
+# --- 策略组 ---
+# balanced: 双线同时使用，按权重分配
+config policy 'balanced'
+	list use_member 'wan1_m1'
+	list use_member 'wan2_m2'
+	option last_resort 'unreachable'  # 双双断线时的最终策略
+
+# wan1_only: 仅主线路
+config policy 'wan1_only'
+	list use_member 'wan1_m1'
+	option last_resort 'unreachable'
+
+# wan2_only: 仅副线路
+config policy 'wan2_only'
+	list use_member 'wan2_m2'
+	option last_resort 'unreachable'
+
+# --- 规则: 按目标/协议分配流量 ---
+# 规则从上到下匹配，匹配到即停止
+
+# 规则1: 国内大流量应用走主线路（游戏/视频/下载）
+config rule 'https'
+	option sticky '1'
+	option dest_port '443'
+	option proto 'tcp'
+	option use_policy 'balanced'
+	option family 'ipv4'
+
+config rule 'http'
+	option sticky '1'
+	option dest_port '80'
+	option proto 'tcp'
+	option use_policy 'balanced'
+
+# 规则2: DNS 查询走主线路
+config rule 'dns_wan1'
+	option sticky '1'
+	option dest_port '53'
+	option proto 'udp'
+	option use_policy 'wan1_only'
+
+# 规则3: SSH/管理流量走主线路（稳定连接）
+config rule 'ssh_wan1'
+	option sticky '1'
+	option dest_port '22'
+	option proto 'tcp'
+	option use_policy 'wan1_only'
+
+# 规则4: 视频/直播流量走副线路
+config rule 'video_wan2'
+	option sticky '0'
+	option dest_port '1935 554 8080 8000'
+	option proto 'tcp udp'
+	option use_policy 'wan2_only'
+
+# 规则5: 游戏 UDP 走主线路（低延迟）
+config rule 'gaming_udp'
+	option sticky '1'
+	option proto 'udp'
+	option dest_port '27000:28999 3478 4379 4380'
+	option use_policy 'wan1_only'
+
+# 规则6: P2P/下载走副线路
+config rule 'p2p_bt'
+	option sticky '0'
+	option dest_port '6881:6889 51413 16881:16889'
+	option proto 'tcp udp'
+	option use_policy 'wan2_only'
+
+# 规则7: 默认 — 双线负载均衡
+config rule 'default_rule'
+	option dest_ip '0.0.0.0/0'
+	option use_policy 'balanced'
+	option family 'ipv4'
+	option sticky '1'
+
+# --- 全局设置 ---
+config globals 'globals'
+	option mmx_mask '0x3F00'
+	option rtmon_interval '5'
+	option local_source 'none'
+	option loglevel 'notice'
