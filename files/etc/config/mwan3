@@ -39,7 +39,8 @@ config policy 'wan2_only'
 # --- 规则: 按目标/协议分配流量 ---
 # 规则从上到下匹配，匹配到即停止
 
-# 规则1: 国内大流量应用走主线路（游戏/视频/下载）
+# 规则1: HTTPS — 视频上传等大流量，双线负载均衡
+# sticky=1 确保整个上传连接不会在中途切换 WAN
 config rule 'https'
 	option sticky '1'
 	option dest_port '443'
@@ -47,7 +48,9 @@ config rule 'https'
 	option use_policy 'balanced'
 	option family 'ipv4'
 
-config rule 'http'
+# 规则1b: 大包/长连接优化 — 超过10MB的TCP连接大概率是上传
+# 分配到负载更轻的线路（MWAN3 会自动感知线路负载）
+config rule 'http_upload'
 	option sticky '1'
 	option dest_port '80'
 	option proto 'tcp'

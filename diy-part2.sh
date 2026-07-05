@@ -22,11 +22,18 @@ cat > files/etc/sysctl.d/99-d525-tune.conf << 'EOF'
 net.core.default_qdisc=fq_codel
 net.ipv4.tcp_congestion_control=bbr
 
-# --- TCP 缓冲区（适配 1-4GB 内存） ---
+# --- TCP 缓冲区（适配 1-4GB 内存，侧重上传优化） ---
+# 大文件上传需要更大的发送缓冲区
 net.core.rmem_max=16777216
-net.core.wmem_max=16777216
+net.core.wmem_max=33554432
 net.ipv4.tcp_rmem=4096 87380 16777216
-net.ipv4.tcp_wmem=4096 65536 16777216
+net.ipv4.tcp_wmem=4096 131072 33554432
+# 允许 TCP 自动调优窗口（上传关键）
+net.ipv4.tcp_window_scaling=1
+net.ipv4.tcp_timestamps=1
+# 初始拥塞窗口扩大（加速上传启动）
+net.ipv4.tcp_slow_start_after_idle=0
+net.ipv4.tcp_initial_congestion_window=20
 
 # --- 网络队列（多WAN需要更大的backlog） ---
 net.core.netdev_max_backlog=5000
