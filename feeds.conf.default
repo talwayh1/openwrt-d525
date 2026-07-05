@@ -1,25 +1,16 @@
-# Lean's LEDE 默认 feeds + 中国社区扩展源
+# Lean's LEDE 默认 feeds
 src-git packages https://github.com/coolsnowwolf/packages
 src-git luci https://github.com/coolsnowwolf/luci
 src-git routing https://github.com/coolsnowwolf/routing
 src-git telephony https://github.com/coolsnowwolf/telephony
 
-# === 中国社区核心 Feeds ===
-# SSR/SSR+/V2Ray/Xray/Trojan 全家桶 (fw876/helloworld)
+# === 核心社区 Feeds（最少必需） ===
+# SSR/SSR+/V2Ray/Xray/Trojan
 src-git helloworld https://github.com/fw876/helloworld
 
-# PassWall 系列 (更现代的代理方案)
-src-git passwall https://github.com/xiaorouji/openwrt-passwall
-src-git passwall2 https://github.com/xiaorouji/openwrt-passwall2
-# passwall 依赖包
-src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-packages
-
-# OpenClash
-src-git openclash https://github.com/vernesong/OpenClash
-
-# kenzok8 大型包集合（docker/aliyundrive/adguardhome 等）
+# kenzok8 大型软件包集合（Docker, AdGuardHome, 阿里云盘等）
 src-git kenzo https://github.com/kenzok8/openwrt-packages
 src-git small https://github.com/kenzok8/small
 
-# 其他常用
-src-git lienol https://github.com/Lienol/openwrt-package
+# OpenClash
+src-git openclash https://github.com/vernesong/OpenClash

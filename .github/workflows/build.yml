@@ -68,9 +68,10 @@ jobs:
 
     - name: Setup git for third-party repos
       run: |
-        # GitHub Actions 内部访问 GitHub 其他仓库需要 token
-        git config --global http.https://github.com/.extraheader "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}"
-        git config --global url."https://github.com/".insteadOf "git@github.com:"
+        # GitHub Actions 克隆第三方公开仓库需要 token
+        git config --global url."https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com".insteadOf "https://github.com"
+        # 验证配置
+        git config --global --list | grep url
 
     - name: Update & install feeds
       working-directory: /workdir/openwrt
