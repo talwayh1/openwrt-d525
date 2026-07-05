@@ -38,6 +38,58 @@ config policy 'wan2_only'
 
 # --- 规则: 按目标/协议分配流量 ---
 # 规则从上到下匹配，匹配到即停止
+#
+# ═══ 平台级路由（ipset 自动分流）═══
+# 先匹配平台 → 性能最好，大文件上传稳定
+
+# 抖音/头条系 → WAN1 电信（低延迟，主线路）
+config rule 'douyin_wan1'
+	option ipset 'douyin_cdn'
+	option sticky '1'
+	option use_policy 'wan1_only'
+	option family 'ipv4'
+	option proto 'tcp'
+
+config rule 'toutiao_wan1'
+	option ipset 'toutiao_cdn'
+	option sticky '1'
+	option use_policy 'wan1_only'
+	option family 'ipv4'
+	option proto 'tcp'
+
+# B站 → WAN2 联通（大文件走副线，不挤主线路）
+config rule 'bili_wan2'
+	option ipset 'bili_cdn'
+	option sticky '1'
+	option use_policy 'wan2_only'
+	option family 'ipv4'
+	option proto 'tcp'
+
+# 小红书 → WAN1 电信
+config rule 'xhs_wan1'
+	option ipset 'xhs_cdn'
+	option sticky '1'
+	option use_policy 'wan1_only'
+	option family 'ipv4'
+	option proto 'tcp'
+
+# 快手 → WAN2 联通
+config rule 'kuaishou_wan2'
+	option ipset 'kuaishou_cdn'
+	option sticky '1'
+	option use_policy 'wan2_only'
+	option family 'ipv4'
+	option proto 'tcp'
+
+# 微信视频号 → WAN1 电信
+config rule 'wxvideo_wan1'
+	option ipset 'wxvideo_cdn'
+	option sticky '1'
+	option use_policy 'wan1_only'
+	option family 'ipv4'
+	option proto 'tcp'
+
+# ═══ 通用流量规则 ═══
 
 # 规则1: HTTPS — 视频上传等大流量，双线负载均衡
 # sticky=1 确保整个上传连接不会在中途切换 WAN
