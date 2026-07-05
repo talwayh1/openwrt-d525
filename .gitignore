@@ -1,0 +1,5 @@
+*.img.gz
+*.img
+*.tar.zst
+imagebuilder/
+.DS_Store

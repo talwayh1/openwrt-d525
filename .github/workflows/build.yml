@@ -1,0 +1,159 @@
+name: Build OpenWrt for D525
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 1 * *'  # Monthly rebuild
+
+env:
+  OPENWRT_VERSION: "25.12.5"
+  TARGET: "x86"
+  SUBTARGET: "64"
+  PROFILE: "generic"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        fs: [ext4, squashfs]
+        include:
+          - fs: ext4
+            rootfs_size: 1024
+          - fs: squashfs
+            rootfs_size: 512
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libncurses-dev zlib1g-dev gawk git \
+            gettext libssl-dev xsltproc rsync wget unzip python3 file
+
+      - name: Download ImageBuilder
+        run: |
+          IB_URL="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${TARGET}/${SUBTARGET}/openwrt-imagebuilder-${OPENWRT_VERSION}-${TARGET}-${SUBTARGET}.Linux-x86_64.tar.zst"
+          echo "Downloading: $IB_URL"
+          wget -q "$IB_URL" -O imagebuilder.tar.zst
+          tar --zstd -xf imagebuilder.tar.zst
+          mv openwrt-imagebuilder-* imagebuilder
+          echo "ImageBuilder ready"
+          ls -la imagebuilder/
+
+      - name: Show available profiles
+        run: |
+          cd imagebuilder
+          make info
+
+      - name: Build firmware (${{ matrix.fs }})
+        run: |
+          cd imagebuilder
+
+          # Package list optimized for D525 4-port gigabit router
+          # D525 typical NICs: Intel 82583V (e1000e), Intel I211 (igb)
+          # WAN + 3xLAN typical config; supports 1G/2G/4G RAM
+          PACKAGES="\
+          luci \
+          luci-i18n-base-zh-cn \
+          luci-app-firewall \
+          luci-app-upnp \
+          luci-app-ddns \
+          luci-app-wireguard \
+          luci-app-openvpn \
+          luci-app-statistics \
+          luci-app-nlbwmon \
+          luci-app-commands \
+          luci-app-ttyd \
+          curl \
+          htop \
+          nano-full \
+          iperf3 \
+          tcpdump \
+          ethtool \
+          pciutils \
+          usbutils \
+          lsblk \
+          fdisk \
+          block-mount \
+          kmod-usb-storage \
+          kmod-usb-ohci \
+          kmod-usb-uhci \
+          kmod-usb2 \
+          kmod-usb3 \
+          kmod-fs-ext4 \
+          kmod-fs-vfat \
+          kmod-fs-exfat \
+          kmod-fs-ntfs3 \
+          wireguard-tools \
+          openvpn-openssl \
+          dnsmasq-full \
+          ip-full \
+          tc-full \
+          ca-certificates \
+          "
+
+          # NIC drivers already in generic profile:
+          # kmod-e1000 kmod-e1000e kmod-igb kmod-igc kmod-r8169
+          # But we explicitly include them for safety
+          PACKAGES="$PACKAGES \
+          kmod-e1000 \
+          kmod-e1000e \
+          kmod-igb \
+          kmod-igc \
+          kmod-r8169 \
+          kmod-forcedeth \
+          "
+
+          echo "=== PACKAGES ==="
+          echo "$PACKAGES"
+
+          make image \
+            PROFILE="${PROFILE}" \
+            PACKAGES="$PACKAGES" \
+            FILES="../files" \
+            CONFIG_IMAGEOPT=y \
+            CONFIG_TARGET_ROOTFS_PARTSIZE=${{ matrix.rootfs_size }} \
+            EXTRA_IMAGE_NAME="d525-4port-1g2g4g"
+
+      - name: List built images
+        run: |
+          echo "=== Built images ==="
+          find imagebuilder/bin -type f -name "*.img.gz" -exec ls -lh {} \;
+          echo ""
+          echo "=== Manifest ==="
+          cat imagebuilder/bin/targets/*/*/*.manifest | head -80
+
+      - name: Upload squashfs image
+        if: matrix.fs == 'squashfs'
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwrt-d525-squashfs
+          path: imagebuilder/bin/targets/*/*/*squashfs*.img.gz
+          retention-days: 90
+
+      - name: Upload ext4 image
+        if: matrix.fs == 'ext4'
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwrt-d525-ext4
+          path: imagebuilder/bin/targets/*/*/*ext4*.img.gz
+          retention-days: 90
+
+      - name: Upload kernel
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwrt-d525-kernel-${{ matrix.fs }}
+          path: imagebuilder/bin/targets/*/*/*kernel.bin
+          retention-days: 90
+
+      - name: Upload manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwrt-d525-manifest-${{ matrix.fs }}
+          path: imagebuilder/bin/targets/*/*/*.manifest
+          retention-days: 90

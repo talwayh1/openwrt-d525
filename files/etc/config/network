@@ -1,0 +1,39 @@
+config interface 'loopback'
+	option device 'lo'
+	option proto 'static'
+	option ipaddr '127.0.0.1'
+	option netmask '255.0.0.0'
+
+config globals 'globals'
+	option ula_prefix 'fd00:abcd:5678::/48'
+
+# ============================================
+# D525 四口千兆路由器 — 端口规划：
+#   eth0 = WAN (DHCP, 接光猫/上级网络)
+#   eth1 = LAN1
+#   eth2 = LAN2  
+#   eth3 = LAN3
+#   LAN1-3 桥接为 br-lan
+# ============================================
+
+config device
+	option name 'br-lan'
+	option type 'bridge'
+	list ports 'eth1'
+	list ports 'eth2'
+	list ports 'eth3'
+
+config interface 'lan'
+	option device 'br-lan'
+	option proto 'static'
+	option ipaddr '192.168.1.1'
+	option netmask '255.255.255.0'
+	option ip6assign '60'
+
+config interface 'wan'
+	option device 'eth0'
+	option proto 'dhcp'
+
+config interface 'wan6'
+	option device 'eth0'
+	option proto 'dhcpv6'
