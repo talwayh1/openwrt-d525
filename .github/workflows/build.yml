@@ -34,9 +34,9 @@ jobs:
       id: ccache-restore
       with:
         path: /tmp/ccache
-        key: ccache-d525-${{ github.ref_name }}-${{ github.sha }}
+        key: ccache-d525-v2-${{ hashFiles('feeds.conf.default') }}-${{ hashFiles('.config') }}
         restore-keys: |
-          ccache-d525-${{ github.ref_name }}-
+          ccache-d525-v2-
           ccache-d525-
 
     - name: Restore download cache
