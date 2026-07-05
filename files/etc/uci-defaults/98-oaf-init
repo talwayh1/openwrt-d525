@@ -1,0 +1,19 @@
+#!/bin/sh
+# ============================================================
+# D525 首次启动: OpenAppFilter 特征库初始化
+# ============================================================
+
+# 确保执行权限
+chmod +x /usr/bin/oaf-update
+
+# 首次启动时立即更新特征库（后台运行，不阻塞启动）
+{
+    sleep 30  # 等网络就绪
+    /usr/bin/oaf-update
+} &
+
+# 确保 crontabs 目录可写
+chmod 755 /etc/crontabs
+[ -f /etc/crontabs/root ] && chmod 644 /etc/crontabs/root
+
+exit 0
