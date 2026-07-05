@@ -14,3 +14,6 @@ src-git small https://github.com/kenzok8/small
 
 # OpenClash
 src-git openclash https://github.com/vernesong/OpenClash
+
+# OpenAppFilter — DPI 应用识别（爱快级协议分流）
+src-git oaf https://github.com/destan19/OpenAppFilter
