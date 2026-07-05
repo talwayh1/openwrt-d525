@@ -1,5 +1,16 @@
 *.img.gz
 *.img
+*.vmdk
+*.vdi
+*.vhdx
+*.tar.gz
 *.tar.zst
-imagebuilder/
+*.log
+openwrt/
+bin/
+build_dir/
+staging_dir/
+dl/
+tmp/
+feeds/
 .DS_Store

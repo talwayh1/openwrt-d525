@@ -1,3 +1,14 @@
+# ============================================================
+# D525 四口千兆软路由 — 默认网络配置
+# ============================================================
+# 端口布局 (从左到右/从上到下):
+#   eth0 = WAN  (接光猫/上级网络)
+#   eth1 = LAN1 (接交换机/PC)
+#   eth2 = LAN2
+#   eth3 = LAN3
+#   LAN1-3 桥接为 br-lan
+# ============================================================
+
 config interface 'loopback'
 	option device 'lo'
 	option proto 'static'
@@ -6,22 +17,17 @@ config interface 'loopback'
 
 config globals 'globals'
 	option ula_prefix 'fd00:abcd:5678::/48'
+	option packet_steering '1'
 
-# ============================================
-# D525 四口千兆路由器 — 端口规划：
-#   eth0 = WAN (DHCP, 接光猫/上级网络)
-#   eth1 = LAN1
-#   eth2 = LAN2  
-#   eth3 = LAN3
-#   LAN1-3 桥接为 br-lan
-# ============================================
-
+# --- LAN 桥接 (eth1 + eth2 + eth3) ---
 config device
 	option name 'br-lan'
 	option type 'bridge'
 	list ports 'eth1'
 	list ports 'eth2'
 	list ports 'eth3'
+	option igmp_snooping '1'
+	option stp '0'
 
 config interface 'lan'
 	option device 'br-lan'
@@ -29,11 +35,18 @@ config interface 'lan'
 	option ipaddr '192.168.1.1'
 	option netmask '255.255.255.0'
 	option ip6assign '60'
+	option delegate '0'
 
+# --- WAN (eth0) ---
 config interface 'wan'
 	option device 'eth0'
 	option proto 'dhcp'
+	option peerdns '0'
+	list dns '223.5.5.5'
+	list dns '119.29.29.29'
 
 config interface 'wan6'
 	option device 'eth0'
 	option proto 'dhcpv6'
+	option reqaddress 'try'
+	option reqprefix 'auto'
